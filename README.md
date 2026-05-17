@@ -49,7 +49,16 @@ This GitHub repository belongs to an online course called
 - ** Developing A2A AI Agent.
 - ** Invoking A2A AI Agent from Javascript.
 - ** Securing A2A AI Agent with Google (OAuth)
-### Section 6: Course Wrap-Up
+
+### Section 7: Workshop! Agent Skills
+- ** What are Agent Skills and how are they different to Tools.
+- ** Example of an Agent Skill.
+
+### Section 8: MCP Gateways
+- ** What are MCP Gateways.
+- ** Commercial options for MCP Gateway
+
+### Section 9: Course Wrap-Up
 - ** Ethical Considerations of MCP  
 
 ---
@@ -57,4 +66,4 @@ This GitHub repository belongs to an online course called
 ## Enroll Now  
 If you have not enrolled yet, use the link below to join the course and put yourself at the forefront of AI:  
 
-👉 [Enroll in Mastering MCP and ACP in AI Agents](https://www.udemy.com/course/mcp-and-a2a-ai-agents/?referralCode=796D178806E9010D7917)
+👉 [Enroll in Mastering MCP and A2A in AI Agents](https://www.udemy.com/course/mcp-and-a2a-ai-agents/?referralCode=796D178806E9010D7917)
