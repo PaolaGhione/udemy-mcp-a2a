@@ -1,0 +1,26 @@
+{
+  "skill_name": "sim_activation_workflow",
+  "description": "Orchestrates the verification and activation of a new mobile SIM card.",
+  "parameters": {
+    "mobile_number": "string",
+    "sim_serial": "string",
+    "customer_id": "string"
+  },
+  "required_tools": [
+    "mcp_gateway.fetch_number_status",
+    "mcp_gateway.validate_identity_api",
+    "mcp_gateway.update_billing_db",
+    "mcp_gateway.call_provisioning_service"
+  ],
+  "execution_logic": "
+    1. Call 'fetch_number_status' using the mobile_number.
+    2. If the status is already 'Active', stop and inform the user.
+    3. If the status is 'Ready', call 'validate_identity_api' using the customer_id.
+    4. If identity checks fail, log a security warning and terminate.
+    5. Call 'update_billing_db' and then 'call_provisioning_service'.
+    6. Confirm success to the user.
+  ",
+  "error_handling": {
+    "provisioning_failed": "Retry once. If it fails again, assign a manual ticket via the support tool and notify the user."
+  }
+}
