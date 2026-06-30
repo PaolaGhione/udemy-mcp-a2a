@@ -1,4 +1,5 @@
-from fastmcp import FastMCP
+# from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
 mcp = FastMCP()
