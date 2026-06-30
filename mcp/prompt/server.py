@@ -5,7 +5,10 @@ from mcp.server.fastmcp.prompts import base
 mcp = FastMCP()
 
 
-@mcp.prompt(title="Attention Prompt", description="This prompt is used to draw attention to a specific message.")
+@mcp.prompt(
+    title="Attention Prompt",
+    description="This prompt is used to draw attention to a specific message."
+)
 async def show_prompt(message: str) -> str:
     return f"Please pay attention to {message}"
 
