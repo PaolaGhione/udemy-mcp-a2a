@@ -2,7 +2,7 @@
 
 Server FastMCP che valida un JWT emesso da Auth0, e client che ottiene il token e chiama il tool `Greetings`.
 
-Il codice del corso è stato adattato a **fastmcp 3.4.2** e a una versione più recente di **authlib**.
+Il codice è compatibile con **fastmcp 3.4.2** e con una versione recente di **authlib**.
 
 ## Avvio
 
@@ -24,9 +24,9 @@ In PowerShell `set CLIENT_ID=...` non crea una variabile d'ambiente (è un alias
 
 Prima di usare il codice, sostituisci in `server.py` e `http-client.py` i valori del tenant (`OAUTH_ISSUER`, `JWKS_URI`, `AUDIENCE`, `token_endpoint`, `audience`) con i tuoi.
 
-## Differenze rispetto al corso
+## Differenze rispetto alle versioni precedenti delle librerie
 
-| Dove | Corso | Versione attuale |
+| Dove | Versione precedente | Versione attuale |
 |---|---|---|
 | `server.py`, costruttore | `FastMCP(stateless_http=True)` | `FastMCP()` |
 | `server.py`, avvio | `run_streamable_http_async()` | `run_http_async(stateless_http=True)` |
@@ -73,6 +73,6 @@ Dopo ogni test negativo ripristina il codice e verifica con `git diff`.
 
 ## Limiti da ricordare
 
-- **Il server non blocca le richieste non valide.** Nei test 3, 4 e 5 il tool risponde comunque con il saluto: i fallimenti si vedono solo nei log. Per bloccarle bisognerebbe sollevare un errore nei rami `else` ed `except`. Il corso non lo prevede.
+- **Il server non blocca le richieste non valide.** Nei test 3, 4 e 5 il tool risponde comunque con il saluto: i fallimenti si vedono solo nei log. Per bloccarle bisognerebbe sollevare un errore nei rami `else` ed `except`.
 - `http-client.py` stampa il token e il server stampa tutti i claim. Va bene in locale, ma non condividere quell'output.
-- Non aggiornare fastmcp (il banner propone la 4.x) a metà corso: il codice potrebbe cambiare di nuovo.
+- Il codice è testato con fastmcp 3.4.2. Aggiornare alla 4.x (il banner la propone) potrebbe richiedere nuove modifiche.
