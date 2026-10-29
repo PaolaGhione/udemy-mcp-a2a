@@ -7,15 +7,30 @@ import httpx
 from authlib.jose import JsonWebToken, JsonWebKey, JWTClaims
 from authlib.jose.util import extract_header
 
-mcp = FastMCP(stateless_http=True)
+mcp = FastMCP()
+
 
 class Greeting(BaseModel):
     message: str
 
+
 # Configuration for OAuth 2.0 provider
-OAUTH_ISSUER = "https://dev-of6fy7icbrna3p24.us.auth0.com/"  # Issuer URL - Change to your own ISSUER URL
-JWKS_URI = "https://dev-of6fy7icbrna3p24.us.auth0.com/.well-known/jwks.json"  # JWKS endpoint - Change to your own URL
-AUDIENCE = "https://dev-of6fy7icbrna3p24.us.auth0.com/api/v2/"  # API Identifier - # JWKS endpoint - Change to your own URL
+
+
+# OAUTH_ISSUER = "https://dev-of6fy7icbrna3p24.us.auth0.com/"
+# # Issuer URL - Change to your own ISSUER URL
+# JWKS_URI = "https://dev-of6fy7icbrna3p24.us.auth0.com/.well-known/jwks.json"
+# # JWKS endpoint - Change to your own URL
+# AUDIENCE = "https://dev-of6fy7icbrna3p24.us.auth0.com/api/v2/"
+# # API Identifier - # JWKS endpoint - Change to your own URL
+
+OAUTH_ISSUER = "https://dev-3bust1qitdzst4fx.eu.auth0.com/"
+# Issuer URL - Change to your own ISSUER URL
+JWKS_URI = "https://dev-3bust1qitdzst4fx.eu.auth0.com/.well-known/jwks.json"
+# JWKS endpoint - Change to your own URL
+AUDIENCE = "https://dev-3bust1qitdzst4fx.eu.auth0.com/api/v2/"
+# API Identifier - # JWKS endpoint - Change to your own URL
+
 
 async def get_public_key(kid: str) -> dict:
     """Fetch public key for the given key ID (kid) from the JWKS endpoint."""
@@ -28,11 +43,14 @@ async def get_public_key(kid: str) -> dict:
             return key
         raise ValueError(f"No public key found for kid: {kid}")
 
+
 @mcp.tool("Greetings")
 async def greetings(name: str) -> Greeting:
-    """A tool function that accepts a parameter called name and returns a personalised greeting message."""
-    headers = get_http_headers()
-    authorization_header = headers.get("Authorization")
+    """A tool function that accepts a parameter called name and returns a
+    personalised greeting message."""
+    # headers = get_http_headers()
+    headers = get_http_headers(include_all=True)
+    authorization_header = headers.get("authorization")
 
     if authorization_header and authorization_header.startswith("Bearer "):
         token = authorization_header.replace("Bearer ", "", 1)
@@ -40,7 +58,8 @@ async def greetings(name: str) -> Greeting:
             # Decode JWT to get kid
             token_obj = JsonWebToken(algorithms=["RS256"])
             header_segment = token.split(".")[0]
-            header = extract_header(header_segment.encode("utf-8"), error_cls=McpError)
+            header = extract_header(header_segment.encode("utf-8"),
+                                    error_cls=McpError)
             kid = header.get("kid")
             if not kid:
                 raise ValueError("No kid in token header")
@@ -50,9 +69,18 @@ async def greetings(name: str) -> Greeting:
             public_key = JsonWebKey.import_key(jwk)
 
             # Validate JWT
-            claims: JWTClaims = token_obj.decode(token, public_key)
-            claims.validate(iss=OAUTH_ISSUER, aud=AUDIENCE, required_scopes=None)
-            user_id = claims.get("sub", "Unknown")  # Use sub for Client Credentials Grant
+            claims: JWTClaims = token_obj.decode(
+                token,
+                public_key,
+                claims_options={
+                    "iss": {"essential": True, "value": OAUTH_ISSUER},
+                    "aud": {"essential": True, "value": AUDIENCE},
+                },
+            )
+            claims.validate()
+
+            # Use sub for Client Credentials Grant
+            user_id = claims.get("sub", "Unknown")
             print("User Id:", user_id)
             print("Kid:", kid)
             print("Claims:", claims)
@@ -63,8 +91,11 @@ async def greetings(name: str) -> Greeting:
 
     return Greeting(message=f"Special greetings to, {name}")
 
+
 async def main():
-    await mcp.run_streamable_http_async()
+    # await mcp.run_streamable_http_async() --> do not exist anymore,
+    # use run_http_async instead
+    await mcp.run_http_async(stateless_http=True)
 
 if __name__ == "__main__":
     asyncio.run(main())

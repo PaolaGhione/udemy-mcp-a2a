@@ -16,7 +16,8 @@ async def get_bearer_token(client_id: str,
             "grant_type": "client_credentials",
             "client_id": client_id,
             "client_secret": client_secret,
-            "audience": "https://dev-of6fy7icbrna3p24.us.auth0.com/api/v2/"
+            # "audience": "https://dev-of6fy7icbrna3p24.us.auth0.com/api/v2/"
+            "audience": "https://dev-3bust1qitdzst4fx.eu.auth0.com/api/v2/",
         }
         response = await client.post(
             token_endpoint,
@@ -32,7 +33,8 @@ async def main():
     # Google OAuth 2.0 provider details
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")
-    token_endpoint = "https://dev-of6fy7icbrna3p24.us.auth0.com/oauth/token"
+    # token_endpoint = "https://dev-of6fy7icbrna3p24.us.auth0.com/oauth/token"
+    token_endpoint = "https://dev-3bust1qitdzst4fx.eu.auth0.com/oauth/token"
     scopes = None
 
     token = await get_bearer_token(client_id, client_secret,
