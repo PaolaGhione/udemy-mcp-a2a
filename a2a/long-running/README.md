@@ -34,7 +34,7 @@ The events arrive one at a time over about 6 seconds, not all at once. Expected 
 |---|---|---|
 | 1 | `task` | `TASK_STATE_SUBMITTED` |
 | 2 | `status_update` | `TASK_STATE_WORKING` (`info: "Working..."`) |
-| 3 | `artifact_update` | text `This is part of the result` |
+| 3 | `artifact_update` | text `This is part of the result for: Hello, Agent.` |
 | 4-7 | steps 2 and 3 repeated | two more times |
 | 8 | `status_update` | `TASK_STATE_COMPLETED` (`info: "Completed..."`) |
 
@@ -46,7 +46,7 @@ After any change to the server: CTRL+C and restart.
 
 `execute(context, event_queue)` does the following:
 
-1. Reads the user text from `context.message.parts[0].text`. It is not used afterwards: it only shows where the input is.
+1. Reads the user text from `context.message.parts[0].text`. It is echoed back in the text of each artifact.
 2. Enqueues a `Task` in state `SUBMITTED`. This must be the first event of a new task (see Notes). `context.task_id` and `context.context_id` are filled in by the server.
 3. Repeats three times: enqueues a `TaskStatusUpdateEvent` with state `WORKING`, waits 2 seconds with `asyncio.sleep` (the "long" work), then enqueues a `TaskArtifactUpdateEvent` carrying an `Artifact` with one text `Part`.
 4. Enqueues a `TaskStatusUpdateEvent` with state `COMPLETED`.
