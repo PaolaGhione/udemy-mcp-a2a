@@ -4,67 +4,79 @@ from uuid import uuid4
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import (
-    TextPart,
+    Artifact,
+    Part,
+    Task,
     TaskArtifactUpdateEvent,
-    TaskStatusUpdateEvent,
     TaskState,
     TaskStatus,
-    Artifact
+    TaskStatusUpdateEvent,
 )
+
 
 class LongRunningExecutor(AgentExecutor):
     async def execute(
-            self,
-            context: RequestContext,
-            event_queue: EventQueue
-    )->None:
+        self,
+        context: RequestContext,
+        event_queue: EventQueue,
+    ) -> None:
         # 1. Read input from context
-        user_text=""
+        user_text = ""
         if context.message.parts:
-            user_text= context.message.parts[0].model_dump()['text']
-        
+            user_text = context.message.parts[0].text
+
         # 2. Signal Task Submitted
-        await event_queue.enqueue_event(TaskStatusUpdateEvent(
-            task_id= context.task_id,
-            context_id= context.context_id,
-            status=TaskStatus(state= TaskState.submitted) ,
-            metadata={"info" : "Submitted..."},
-            final=False
-        ))
+        # In a2a-sdk 1.x the first event of a new task must be a Task object:
+        # status updates and artifacts are only accepted after it.
+        await event_queue.enqueue_event(
+            Task(
+                id=context.task_id,
+                context_id=context.context_id,
+                status=TaskStatus(state=TaskState.TASK_STATE_SUBMITTED),
+            )
+        )
 
         # 3. Simulate work with status and artifact updates
-        for i in range (1,4):
-                await event_queue.enqueue_event(TaskStatusUpdateEvent(
-                task_id= context.task_id,
-                context_id= context.context_id,
-                status=TaskStatus(state= TaskState.working),
-                metadata={"info" : "Working..."},
-                final=False
-             ))
-
-                await asyncio.sleep(2) # Long running work
-
-                artifact_parts = [TextPart(text='This is part of the result')]
-                artifact = Artifact(artifact_id= uuid4().hex , name="Artifact", description="Partial Result", parts=artifact_parts)
-
-                await event_queue.enqueue_event(TaskArtifactUpdateEvent(
-                    task_id= context.task_id,
+        for _ in range(1, 4):
+            await event_queue.enqueue_event(
+                TaskStatusUpdateEvent(
+                    task_id=context.task_id,
                     context_id=context.context_id,
-                    artifact=artifact
+                    status=TaskStatus(state=TaskState.TASK_STATE_WORKING),
+                    metadata={"info": "Working..."},
+                )
+            )
 
-                ))
-        
-        # 5. Signal Task Completed
-        await event_queue.enqueue_event(TaskStatusUpdateEvent(
-            task_id= context.task_id,
-            context_id= context.context_id,
-            status=TaskStatus(state= TaskState.completed),
-            metadata={"info" : "Completed..."},
-            final=True
-        ))
+            await asyncio.sleep(2)  # Long running work
 
-    async def cancel(self, context:RequestContext, event_queue:EventQueue) -> None:
-         pass
+            artifact = Artifact(
+                artifact_id=uuid4().hex,
+                name="Artifact",
+                description="Partial Result",
+                parts=[Part(text="This is part of the result")],
+            )
 
+            await event_queue.enqueue_event(
+                TaskArtifactUpdateEvent(
+                    task_id=context.task_id,
+                    context_id=context.context_id,
+                    artifact=artifact,
+                )
+            )
 
+        # 4. Signal Task Completed
+        await event_queue.enqueue_event(
+            TaskStatusUpdateEvent(
+                task_id=context.task_id,
+                context_id=context.context_id,
+                status=TaskStatus(state=TaskState.TASK_STATE_COMPLETED),
+                metadata={"info": "Completed..."},
+            )
+        )
 
+    async def cancel(
+        self,
+        context: RequestContext,
+        event_queue: EventQueue,
+    ) -> None:
+        pass
