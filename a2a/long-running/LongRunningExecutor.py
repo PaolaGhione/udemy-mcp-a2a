@@ -49,11 +49,12 @@ class LongRunningExecutor(AgentExecutor):
 
             await asyncio.sleep(2)  # Long running work
 
+            result_text = f"This is part of the result for: {user_text}"
             artifact = Artifact(
                 artifact_id=uuid4().hex,
                 name="Artifact",
                 description="Partial Result",
-                parts=[Part(text="This is part of the result")],
+                parts=[Part(text=result_text)],
             )
 
             await event_queue.enqueue_event(
