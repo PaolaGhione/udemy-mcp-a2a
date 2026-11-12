@@ -1,16 +1,41 @@
-
 import asyncio
-from acp_sdk.client import Client
-from acp_sdk.models import Message, MessagePart
+from uuid import uuid4
+
+import httpx
+
+from a2a.client import ClientConfig, ClientFactory
+from a2a.client.card_resolver import A2ACardResolver
+from a2a.types import Message, Part, Role, SendMessageRequest
 
 
 async def example() -> None:
-    number="0498765432"
-    async with Client(base_url="http://localhost:9000", headers={"x-api-key":"123"}) as client:
-        run = await client.run_sync(agent="SimAssistant", input=Message(parts=[MessagePart(content=f"Please activate my sim card .  My mobile number is 0498765432")]))
-        #run = await client.run_sync(agent="SimAssistant", input=Message(parts=[MessagePart(content=f"buy me a coffee")]))
-        print(run.output[0].parts[0].content)
+    server_url = "http://localhost:9000"
 
+    async with httpx.AsyncClient() as httpx_client:
+        resolver = A2ACardResolver(
+            httpx_client=httpx_client,
+            base_url=server_url,
+            agent_card_path="/.well-known/agent-card.json",
+        )
+        agent_card = await resolver.get_agent_card()
+
+        config = ClientConfig(httpx_client=httpx_client)
+        client = ClientFactory(config=config).create(card=agent_card)
+
+        request = SendMessageRequest(
+            message=Message(
+                role=Role.ROLE_USER,
+                parts=[Part(text=(
+                    "Please activate my sim card. "
+                    "My mobile number is 0498765432"
+                ))],
+                message_id=uuid4().hex,
+            )
+        )
+        # request.message.parts[0].text = "buy me a coffee"
+
+        async for event in client.send_message(request):
+            print(event)
 
 
 if __name__ == "__main__":

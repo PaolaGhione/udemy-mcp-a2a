@@ -1,21 +1,18 @@
 import os
 import httpx
 from typing import List
+from uuid import uuid4
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
-from a2a.utils import new_agent_text_message
+from a2a.types import Message, Part, Role
 
-from beeai_framework.backend.chat import ChatModel, _ChatModelKwargsAdapter
+from beeai_framework.backend.chat import ChatModel
 from beeai_framework.agents.react import ReActAgent
 from beeai_framework.memory.token_memory import TokenMemory
-from beeai_framework.backend.message import SystemMessage 
+from beeai_framework.backend.message import SystemMessage
 from beeai_framework.tools import AnyTool
 from beeai_framework.tools.mcp import MCPTool
-from beeai_framework.context import RunContext
-
-# Required fix for BeeAI/Pydantic compatibility
-_ChatModelKwargsAdapter.rebuild()
 
 from mcp.client.streamable_http import streamable_http_client
 from mcp import ClientSession
@@ -29,7 +26,6 @@ class SimAssistantAgent:
             raise RuntimeError("OPENAI_API_KEY environment value is not set.")
         
         self.llm = ChatModel.from_name("openai:gpt-4o-mini")
-        self.memory = TokenMemory(self.llm)
         self.tools: List[AnyTool] = []
         
         self.system_prompt = (
@@ -39,12 +35,13 @@ class SimAssistantAgent:
             "2) Mobile number must be in Australian format (e.g. 04 or +61). If not, stop.\n"
             "3) Check SIM status using tools:\n"
             "   - If 'active': reply exactly 'your sim is already active'.\n"
-            "   - If 'inactive': call set_number_status to activate, then reply 'Your SIM was activated.'\n"
+            "   - If 'inactive': you MUST call set_number_status with new_status 'active'. "
+            "Only after that tool returns status 'active', reply 'Your SIM was activated.' "
+            "Never say the SIM was activated without calling set_number_status.\n"
             "   - If 'not_found': reply exactly 'Mobile number not found'.\n"
             "If 'error' is in tool response, stop and report it.\n"
             "Only use the responses specified. You have access to tools. Do not output MCP instructions."
         )
-        
 
     async def invoke(self, user_text: str) -> str:
         async with httpx.AsyncClient(headers={"x-api-key": "123"}) as http_client:
@@ -54,30 +51,41 @@ class SimAssistantAgent:
             ) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
-                    if not self.tools:
-                        mcp_tools = await MCPTool.from_client(client=session)
-                        self.tools = [t for t in mcp_tools if t.name in ["get_number_status", "set_number_status"]]
-        
-                    has_system_prompt = any(isinstance(msg, SystemMessage) for msg in self.memory.messages)
-        
-                    if not has_system_prompt:
-                        await self.memory.add(SystemMessage(self.system_prompt), 0)
+                    # The tools are bound to this MCP session, which is closed
+                    # at the end of the call, so reload them on every request.
+                    mcp_tools = await MCPTool.from_client(client=session)
+                    self.tools = [
+                        t for t in mcp_tools
+                        if t.name in ["get_number_status", "set_number_status"]
+                    ]
 
-                    agent = ReActAgent(llm=self.llm, tools=self.tools, memory=self.memory)
+                    # Fresh memory for every request: a memory shared by all
+                    # requests made the model stop calling the tools.
+                    memory = TokenMemory(self.llm)
+                    await memory.add(SystemMessage(self.system_prompt))
+                    agent = ReActAgent(
+                        llm=self.llm, tools=self.tools, memory=memory
+                    )
 
                     run_output = await agent.run(user_text)
-        
+
                     # Return the last message text from history
                     return run_output.output[-1].text
+
 
 class SimAssistantExecutor(AgentExecutor):
     def __init__(self):
         self.agent = SimAssistantAgent()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        user_text= context.message.parts[0].model_dump()['text'] 
+        user_text = context.get_user_input()
         result = await self.agent.invoke(user_text)
-        await event_queue.enqueue_event(new_agent_text_message(result))
+        message = Message(
+            role=Role.ROLE_AGENT,
+            parts=[Part(text=result)],
+            message_id=uuid4().hex,
+        )
+        await event_queue.enqueue_event(message)
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         print("Cancellation requested but not supported.")

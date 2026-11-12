@@ -1,10 +1,14 @@
-from a2a.server.apps import A2AFastAPIApplication
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.routes import create_agent_card_routes, create_jsonrpc_routes
+from a2a.server.routes.fastapi_routes import add_a2a_routes_to_fastapi
 from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import AgentCard, AgentCapabilities, AgentSkill
+from a2a.types import AgentCapabilities, AgentCard, AgentInterface, AgentSkill
 
 from SimAssistantExecutor import SimAssistantExecutor
-from fastapi.middleware.cors import CORSMiddleware
 
 if __name__ == "__main__":
 
@@ -23,7 +27,13 @@ if __name__ == "__main__":
         name="SimAssistant",
         description="Activate Australian SIMs using MCP-backed tools",
         version="1.0",
-        url="http://localhost:9000",
+        supported_interfaces=[
+            AgentInterface(
+                url="http://localhost:9000",
+                protocol_binding="JSONRPC",
+                protocol_version="1.0",
+            )
+        ],
         default_input_modes=["text"],
         default_output_modes=["text"],
         skills=[agent_skill],
@@ -32,13 +42,20 @@ if __name__ == "__main__":
 
     request_handler = DefaultRequestHandler(
         agent_executor=SimAssistantExecutor(),
-        task_store=InMemoryTaskStore()
+        task_store=InMemoryTaskStore(),
+        agent_card=agent_card
     )
 
-    server = A2AFastAPIApplication(
-        http_handler=request_handler,
-        agent_card=agent_card
-    ).build()
+    server = FastAPI()
+    add_a2a_routes_to_fastapi(
+        server,
+        agent_card_routes=create_agent_card_routes(agent_card),
+        # chat.html still sends the old A2A 0.3 format ("message/send"),
+        # so we keep the 0.3 compatibility layer enabled.
+        jsonrpc_routes=create_jsonrpc_routes(
+            request_handler, rpc_url="/", enable_v0_3_compat=True
+        ),
+    )
 
     server.add_middleware(
         CORSMiddleware,
@@ -47,7 +64,7 @@ if __name__ == "__main__":
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    import uvicorn
+
     uvicorn.run(
         server,
         host="0.0.0.0",

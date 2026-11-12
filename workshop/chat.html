@@ -1,14 +1,11 @@
+<!-- Google sign-in removed for local testing (the agent does not validate the token yet).
+     The original version with the login is in git history. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>SIM Activation Chat</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
-    #inputBox {
-    display: none; /* hidden until login */
-    }
-
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f9;
@@ -80,12 +77,6 @@
 </head>
 <body>
   <div id="chat">
-    <div id="g_id_onload"
-      data-client_id="<< YOUR GOOGLE CLIENT ID>>" 
-      data-callback="handleCredentialResponse" >
-    </div>
-    <div class="g_id_signin" data-type="standard"></div>
-
     <div id="messages"></div>
     <div id="spinner"></div>
     <div id="inputBox">
@@ -105,8 +96,6 @@
       addMessage(text, "user");
       input.value = "";
       showSpinner();
-
-      const idToken = localStorage.getItem("google_id_token");
 
       // Construct the strictly formatted A2A JSON-RPC payload
       const payload = {
@@ -132,8 +121,7 @@
         const res = await fetch("http://localhost:9000/", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${idToken}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify(payload)
         });
@@ -177,16 +165,6 @@
 
     
   </script>
-
-  <script>
-    function handleCredentialResponse(response) {
-      //  JWT (ID token) from Google
-      const idToken = response.credential;
-      // Save idToken for later fetch calls
-      localStorage.setItem("google_id_token", idToken);
-      document.getElementById("inputBox").style.display = "flex";
-    }
-</script>
 
 
 </body>
