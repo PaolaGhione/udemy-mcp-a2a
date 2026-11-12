@@ -39,7 +39,7 @@ async def main():
 
     token = await get_bearer_token(client_id, client_secret,
                                    token_endpoint, scopes)
-    print(token)
+    # print(token)  # disabled: do not print the access token
     async with httpx.AsyncClient(auth=BearerAuth(token=token)) as http_client:
         async with streamable_http_client(
             url="http://localhost:8000/mcp",

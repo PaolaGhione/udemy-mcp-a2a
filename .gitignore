@@ -34,6 +34,7 @@ htmlcov/
 
 # Project-specific
 mcp-acp.db
+mcp-a2a.db
 
 # libraries
 requirements.txt
